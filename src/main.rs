@@ -17,6 +17,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::default::Default;
+use std::ffi::CString;
 use std::str;
 
 #[derive(Debug)]
@@ -56,6 +57,11 @@ fn main() {
 
     let args = App::new("arch-audit")
                         .version("0.1.2")
+                        .arg(Arg::with_name("dbpath")
+                             .short("b")
+                             .long("dbpath")
+                             .takes_value(true)
+                             .help("Set an alternate database location"))
                         .arg(Arg::with_name("format")
                              .short("f")
                              .long("format")
@@ -131,7 +137,11 @@ fn main() {
         }
     }
 
-    let pacman = alpm::Alpm::new().unwrap();
+    let pacman = match args.value_of("dbpath") {
+        Some(path) => { alpm::Alpm::with_dbpath(CString::new(path).unwrap()).unwrap() },
+        None => { alpm::Alpm::new().unwrap() },
+    };
+
     for (pkg, cves) in infos {
         match pacman.query_package_version(pkg.clone()) {
             Ok(v) => {
